@@ -47,12 +47,20 @@ def test_default_search_matches():
     ({"minus_words": ["платформ"]}, lambda t: None),
     ({"edrpou_allow": ["33240845"]}, lambda t: t["procuringEntity"]["identifier"].update(id="99999999")),
     ({"edrpou_deny": ["33240845"]}, lambda t: None),
+    ({"max_age_days": 1}, lambda t: t.update(date="2026-01-01T00:00:00+02:00")),
 ])
 def test_each_filter_rejects(params, mutate):
     t = copy.deepcopy(T)
     mutate(t)
     ok, why = match(t, search(**params))
     assert not ok and why
+
+
+def test_max_age_days_fresh():
+    from datetime import datetime, timezone
+    t = copy.deepcopy(T)
+    t["date"] = datetime.now(timezone.utc).isoformat()
+    assert match(t, search(max_age_days=3))[0]
 
 
 def test_bid_guarantee_by_criterion_only():

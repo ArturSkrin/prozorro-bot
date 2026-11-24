@@ -1,7 +1,8 @@
 """Процесс бота: feed_watcher → очередь → detail_worker → match → notifier; отдельно tg_poller.
 
 python -m bot              — работать
-python -m bot backfill 7   — разово пройти изменения за 7 дней (то же сопоставление и дедуп)
+python -m bot backfill 7          — разово пройти изменения за 7 дней: совпадения пишутся в БД (видны в вебе), в Telegram не шлются
+python -m bot backfill 3 --send   — то же, но с отправкой в Telegram
 """
 import asyncio
 import json
@@ -34,14 +35,14 @@ def wanted(item, searches, matched):
     return item["id"] in matched or any(prefilter(item, s["params"]) for s in searches)
 
 
-async def process(con, tg, t):
+async def process(con, tg, t, send=True):
     old = db.upsert_tender(con, t, winner_key(t))
     new = []
     for s in db.searches(con, enabled_only=True):
         ok, reasons = match(t, s)
         if ok and db.add_match(con, s["id"], t["id"], reasons):
             new.append(s)
-    if db.get_state(con, "paused") == "1":
+    if not send or db.get_state(con, "paused") == "1":
         return  # совпадения записаны (видны в вебе), но не шлём
     delay = time.time() - ts(t["dateModified"])
     if new:
@@ -71,13 +72,13 @@ async def process(con, tg, t):
                          + f"\nhttps://prozorro.gov.ua/tender/{t.get('tenderID')}")
 
 
-async def detail_worker(con, api, tg, queue):
+async def detail_worker(con, api, tg, queue, send=True):
     while True:
         item = await queue.get()
         try:
             while True:
                 try:
-                    await process(con, tg, await api.tender(item["id"]))
+                    await process(con, tg, await api.tender(item["id"]), send)
                     break
                 except httpx.HTTPStatusError as e:  # 404 и т.п. — тендер не отдаётся, пропускаем
                     db.log_error(con, f"{item.get('tenderID')}: HTTP {e.response.status_code}")
@@ -147,10 +148,13 @@ async def run(args):
     tg = Tg(con)
     queue = asyncio.Queue()
     tasks = [asyncio.create_task(tg.sender())]
-    tasks += [asyncio.create_task(detail_worker(con, api, tg, queue)) for _ in range(config.DETAIL_WORKERS)]
+    is_backfill = args[:1] == ["backfill"]
+    send = not is_backfill or "--send" in args
+    days = [a for a in args[1:] if a != "--send"]
+    tasks += [asyncio.create_task(detail_worker(con, api, tg, queue, send)) for _ in range(config.DETAIL_WORKERS)]
     try:
-        if args[:1] == ["backfill"]:
-            await backfill(con, api, queue, float(args[1]) if len(args) > 1 else 7)
+        if is_backfill:
+            await backfill(con, api, queue, float(days[0]) if days else 7)
             await tg.queue.join()
         else:
             tasks += [asyncio.create_task(tg.poller())]

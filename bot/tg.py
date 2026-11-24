@@ -64,6 +64,7 @@ STEPS = [
     ("statuses", "statuses", "Статуси (натисніть потрібні, потім «Далі»):"),
     ("amount_min", "num", "Очікувана вартість ВІД (число або «-»):"),
     ("amount_max", "num", "Очікувана вартість ДО (число або «-»):"),
+    ("max_age_days", "num", "Не старше N днів (від останньої зміни статусу), число або «-»:"),
     ("currency", "text", "Валюта (UAH, EUR… або «-»):"),
     ("guarantees", "flags", "Вимагати забезпечення (натисніть, потім «Далі»):"),
     ("method_types", "list", "Типи процедури через кому (aboveThreshold, belowThreshold… або «-»):"),
@@ -86,6 +87,7 @@ class Tg:
         self.wizards = {}  # chat_id -> {"step": i, "sid": id|None, "name":…, "params":…, "send_changes":…}
 
     async def call(self, method, **params):
+        params = {k: v for k, v in params.items() if v is not None}  # Telegram не принимает null (reply_markup и т.п.)
         while True:
             try:
                 r = await self.http.post(method, json=params)
@@ -132,6 +134,10 @@ class Tg:
 
     async def poller(self):
         offset = int(db.get_state(self.con, "tg_offset", 0))
+        await self.call("setMyCommands", commands=[  # меню команд в Telegram
+            {"command": c, "description": d} for c, d in [
+                ("searches", "Пошуки і фільтри"), ("new", "Новий пошук"), ("status", "Стан бота"),
+                ("pause", "Пауза сповіщень"), ("resume", "Увімкнути сповіщення")]])
         while True:
             updates = await self.call("getUpdates", offset=offset, timeout=50,
                                       allowed_updates=["message", "callback_query"])
@@ -157,6 +163,8 @@ class Tg:
         m = u.get("message") or {}
         chat_id, user_id = m.get("chat", {}).get("id"), (m.get("from") or {}).get("id")
         if not self.allowed(chat_id, user_id):
+            f = m.get("from") or {}  # чтобы узнать user_id для TG_ALLOWED_USERS
+            log.info("чужой: user_id=%s %s @%s", user_id, f.get("first_name", ""), f.get("username", ""))
             return
         text = (m.get("text") or "").strip()
         cmd = text.split()[0].split("@")[0] if text.startswith("/") else None
@@ -319,6 +327,8 @@ def search_text(s):
         bits.append("статус: " + ", ".join(STATUSES.get(x, x) for x in p["statuses"]))
     if p["amount_min"] is not None or p["amount_max"] is not None:
         bits.append(f"сума: {money(p['amount_min'])} … {money(p['amount_max'])} {p['currency'] or ''}")
+    if p["max_age_days"] is not None:
+        bits.append(f"не старше {p['max_age_days']:g} дн.")
     if p["bid_guarantee"]:
         bits.append("є забезп. пропозицій")
     if p["contract_guarantee"]:

@@ -5,6 +5,7 @@
 <div class="muted">Статуси</div><div>{% for c, n in STATUSES.items() %}<label style="display:inline-block;margin-right:12px"><input type="checkbox" name="statuses" value="{{ c }}" {{ 'checked' if c in p.statuses }}> {{ n }}</label>{% endfor %}</div>
 <label class="muted">Сума від</label><input name="amount_min" value="{{ '' if p.amount_min is none else '%.0f'|format(p.amount_min) }}" inputmode="decimal">
 <label class="muted">Сума до</label><input name="amount_max" value="{{ '' if p.amount_max is none else '%.0f'|format(p.amount_max) }}" inputmode="decimal">
+<label class="muted">Не старше, днів</label><input name="max_age_days" value="{{ '' if p.max_age_days is none else '%g'|format(p.max_age_days) }}" inputmode="decimal" placeholder="від останньої зміни статусу">
 <label class="muted">Валюта</label><input name="currency" value="{{ p.currency or '' }}" placeholder="UAH">
 <div class="muted">Забезпечення</div><div><label><input type="checkbox" name="bid_guarantee" {{ 'checked' if p.bid_guarantee }}> пропозицій</label>
 <label><input type="checkbox" name="contract_guarantee" {{ 'checked' if p.contract_guarantee }}> виконання договору</label></div>
