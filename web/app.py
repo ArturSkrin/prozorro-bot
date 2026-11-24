@@ -129,7 +129,7 @@ def search_edit(sid=None):
         try:
             params = {k: [x.strip() for x in f.get(k, "").split(",") if x.strip()] for k in LIST_KEYS if k != "statuses"}
             params["statuses"] = [x for x in f.getlist("statuses") if x in STATUSES]
-            for k in ("amount_min", "amount_max"):
+            for k in ("amount_min", "amount_max", "max_age_days"):
                 v = f.get(k, "").replace(" ", "").replace(",", ".")
                 params[k] = float(v) if v else None
             params["currency"] = f.get("currency", "").strip().upper() or None
@@ -172,4 +172,4 @@ def status():
 
 
 if __name__ == "__main__":
-    app.run(host=os.environ.get("WEB_HOST", "127.0.0.1"), port=int(os.environ.get("WEB_PORT", "8080")))
+    app.run(host=os.environ.get("WEB_HOST", "127.0.0.1"), port=int(os.environ.get("WEB_PORT", "8090")))

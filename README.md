@@ -16,13 +16,13 @@ python3.12 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env    # заполнить TG_TOKEN, TG_CHAT_IDS, WEB_PASSWORD, WEB_SECRET
 python -m bot           # бот
-python -m web.app       # веб-морда на http://127.0.0.1:8080
+python -m web.app       # веб-морда на http://127.0.0.1:8090
 python -m bot backfill 7   # разово: изменения за 7 дней (те же поиски и дедуп)
 ```
 
 Docker (домашняя лаборатория): `cp .env.example .env`, заполнить, `docker compose up -d --build`.
-БД лежит в `./data`. Веб слушает только `127.0.0.1:8080` хоста; наружу — через Cloudflare Tunnel
-(`cloudflared tunnel --url http://127.0.0.1:8080` или именованный туннель), пароль из `WEB_PASSWORD` обязателен.
+БД лежит в `./data`. Веб слушает только `127.0.0.1:8090` хоста; наружу — через Cloudflare Tunnel
+(`cloudflared tunnel --url http://127.0.0.1:8090` или именованный туннель), пароль из `WEB_PASSWORD` обязателен.
 
 ## Как добавить чат в whitelist
 

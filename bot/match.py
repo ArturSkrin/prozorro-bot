@@ -1,4 +1,6 @@
 """Чистая логика фильтров: одна модель поиска для Telegram и веба."""
+import time
+from datetime import datetime
 
 # Коды статусов API → названия как на prozorro.gov.ua
 STATUSES = {
@@ -33,6 +35,7 @@ DEFAULT_PARAMS = {
     "minus_words": [],
     "edrpou_allow": [],
     "edrpou_deny": [],
+    "max_age_days": None,    # статус змінено не раніше ніж N днів тому (поле date)
 }
 
 DEFAULT_SEARCH = {
@@ -96,6 +99,12 @@ def match(tender, search):
         check(amount is not None and amount >= p["amount_min"], f"сума ≥ {p['amount_min']:,.0f}", f"сума {amount}")
     if p["amount_max"] is not None:
         check(amount is not None and amount <= p["amount_max"], f"сума ≤ {p['amount_max']:,.0f}", f"сума {amount}")
+
+    if p["max_age_days"] is not None:
+        d = tender.get("date")
+        age = (time.time() - datetime.fromisoformat(d).timestamp()) / 86400 if d else None
+        check(age is not None and age <= p["max_age_days"], f"статус змінено {age:.1f} дн. тому" if age is not None else "",
+              f"статус змінено {age:.0f} дн. тому" if age is not None else "немає дати")
 
     if p["bid_guarantee"]:
         check(bid_guarantee(tender) is not None, "є забезпечення пропозицій", "немає забезпечення пропозицій")
