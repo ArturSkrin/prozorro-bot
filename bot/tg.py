@@ -163,6 +163,8 @@ class Tg:
         m = u.get("message") or {}
         chat_id, user_id = m.get("chat", {}).get("id"), (m.get("from") or {}).get("id")
         if not self.allowed(chat_id, user_id):
+            f = m.get("from") or {}  # чтобы узнать user_id для TG_ALLOWED_USERS
+            log.info("чужой: user_id=%s %s @%s", user_id, f.get("first_name", ""), f.get("username", ""))
             return
         text = (m.get("text") or "").strip()
         cmd = text.split()[0].split("@")[0] if text.startswith("/") else None
