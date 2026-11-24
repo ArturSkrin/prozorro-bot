@@ -2,13 +2,14 @@ services:
   bot:
     build: .
     env_file: .env
+    environment: { DB_PATH: /data/prozorro.db }  # перекрывает DB_PATH из .env, база живёт в ./data
     volumes: [./data:/data]
     restart: unless-stopped
     stop_grace_period: 20s
   web:
     build: .
     env_file: .env
-    environment: { WEB_HOST: 0.0.0.0 }   # внутри контейнера; наружу только на 127.0.0.1 хоста
+    environment: { WEB_HOST: 0.0.0.0, DB_PATH: /data/prozorro.db }   # внутри контейнера; наружу только на 127.0.0.1 хоста
     command: ["python", "-m", "web.app"]
     ports: ["127.0.0.1:8090:8090"]
     volumes: [./data:/data]
