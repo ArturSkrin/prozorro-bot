@@ -57,3 +57,4 @@ Docker (домашняя лаборатория): `cp .env.example .env`, зап
 ```bash
 pip install pytest && python -m pytest -q
 ```
+# prozorro-bot
