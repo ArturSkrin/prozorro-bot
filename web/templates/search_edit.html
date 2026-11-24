@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block body %}
+<form method="post" class="grid"><input type="hidden" name="csrf" value="{{ csrf() }}">
+{% if error %}<div></div><div class="err">{{ error }}</div>{% endif %}
+<label class="muted">Назва</label><input name="name" value="{{ s.name }}" required>
+<div class="muted">Статуси</div><div>{% for c, n in STATUSES.items() %}<label style="display:inline-block;margin-right:12px"><input type="checkbox" name="statuses" value="{{ c }}" {{ 'checked' if c in p.statuses }}> {{ n }}</label>{% endfor %}</div>
+<label class="muted">Сума від</label><input name="amount_min" value="{{ '' if p.amount_min is none else '%.0f'|format(p.amount_min) }}" inputmode="decimal">
+<label class="muted">Сума до</label><input name="amount_max" value="{{ '' if p.amount_max is none else '%.0f'|format(p.amount_max) }}" inputmode="decimal">
+<label class="muted">Валюта</label><input name="currency" value="{{ p.currency or '' }}" placeholder="UAH">
+<div class="muted">Забезпечення</div><div><label><input type="checkbox" name="bid_guarantee" {{ 'checked' if p.bid_guarantee }}> пропозицій</label>
+<label><input type="checkbox" name="contract_guarantee" {{ 'checked' if p.contract_guarantee }}> виконання договору</label></div>
+{% for k, label in [('method_types','Типи процедури'),('cpv','CPV префікси'),('regions','Регіони замовника'),('keywords','Ключові слова'),('minus_words','Мінус-слова'),('edrpou_allow','ЄДРПОУ: білий список'),('edrpou_deny','ЄДРПОУ: чорний список')] %}
+<label class="muted">{{ label }}</label><input name="{{ k }}" value="{{ p[k]|join(', ') }}" placeholder="через кому">{% endfor %}
+<label class="muted">Чати (chat_id)</label><input name="chat_ids" value="{{ s.chat_ids|join(', ') }}" placeholder="порожньо = усі з .env">
+<div class="muted">Опції</div><div><label><input type="checkbox" name="enabled" {{ 'checked' if s.enabled }}> увімкнено</label>
+<label><input type="checkbox" name="send_changes" {{ 'checked' if s.send_changes }}> надсилати зміни</label></div>
+<div></div><div><button>Зберегти</button> <a href="{{ url_for('searches') }}">скасувати</a></div></form>
+{% endblock %}

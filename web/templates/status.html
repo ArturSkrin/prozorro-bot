@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block body %}
+<div class="grid">
+<div class="muted">Стан</div><div>{{ 'На паузі' if info.paused == '1' else 'Працює' }}</div>
+<div class="muted">Курсор</div><div><code>{{ info.feed_offset or '—' }}</code></div>
+<div class="muted">Остання зміна</div><div>{{ info.last_modified or '—' }}</div>
+<div class="muted">Відставання</div><div class="num" style="text-align:left">{{ '%.0f'|format(info.lag_sec|float) if info.lag_sec else '—' }} с</div>
+<div class="muted">Надіслано за добу / всього</div><div class="num" style="text-align:left">{{ sent_day }} / {{ sent_total }}</div>
+</div>
+<h3>Помилки API</h3><table>{% for e in errors %}<tr><td class="num muted">{{ e.ts|dt }}</td><td>{{ e.text }}</td></tr>{% else %}<tr><td class="muted">немає</td></tr>{% endfor %}</table>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block body %}
+<form class="filters"><input name="q" value="{{ q }}" placeholder="UA-2026-…">
+<select name="search"><option value="">усі пошуки</option>{% for s in searches %}<option value="{{ s.id }}" {{ 'selected' if sid == s.id|string }}>{{ s.name }}</option>{% endfor %}</select>
+<select name="state"><option value="">усі</option>{% for k, v in [('new','новий'),('taken','беру'),('skip','не цікаво')] %}<option value="{{ k }}" {{ 'selected' if state == k }}>{{ v }}</option>{% endfor %}</select>
+<button>Фільтр</button></form>
+<div class="wrap"><table><tr><th>Надіслано</th><th>Тендер</th><th>Назва / замовник</th><th class="num">Сума</th><th>Статус</th><th>Пошуки</th><th>Стан</th></tr>
+{% for r in rows %}<tr><td class="num muted">{{ r.sent_at|dt }}</td><td><a href="{{ url_for('tender', tid=r.id) }}">{{ r.tender_id }}</a></td>
+<td>{{ r.title }}<div class="muted">{{ r.buyer }}</div></td><td class="num">{{ r.amount|money }} {{ r.currency }}</td>
+<td>{{ STATUSES.get(r.status, r.status) }}</td><td class="muted">{{ r.searches }}</td>
+<td class="{{ r.state }}">{{ {'new':'новий','taken':'взяв ' ~ (r.taken_by or ''),'skip':'не цікаво'}[r.state] }}</td></tr>
+{% else %}<tr><td colspan="7" class="muted">Поки нічого</td></tr>{% endfor %}</table></div>
+{% endblock %}

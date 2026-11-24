@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block body %}
+<form method="post" style="max-width:280px;display:grid;gap:8px">
+<input type="hidden" name="csrf" value="{{ csrf() }}">
+<label>Пароль <input type="password" name="password" autofocus required></label>
+{% if error %}<div class="err">{{ error }}</div>{% endif %}<button>Увійти</button></form>
+{% endblock %}

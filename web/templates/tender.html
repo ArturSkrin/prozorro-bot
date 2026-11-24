@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% block title %}{{ t.tenderID }}{% endblock %}{% block body %}
+{% macro org(o) %}<b>{{ o.name }}</b>, ЄДРПОУ {{ (o.identifier or {}).id }}{% set cp = o.contactPoint or {} %}
+<div>{{ cp.name or '' }} {{ cp.telephone or '' }} {% if cp.email %}<a href="mailto:{{ cp.email }}">{{ cp.email }}</a>{% endif %}</div>{% endmacro %}
+<h2>{{ t.tenderID }} <span class="tag">{{ STATUSES.get(t.status, t.status) }}</span></h2>
+<div class="grid">
+<div class="muted">Назва</div><div>{{ t.title }}</div>
+<div class="muted">Сума</div><div class="num" style="text-align:left">{{ (t.value or {}).amount|money }} {{ (t.value or {}).currency }}</div>
+<div class="muted">Процедура</div><div>{{ t.procurementMethodType }}</div>
+<div class="muted">Забезп. пропозицій</div><div>{{ 'немає' if bg is none else ('є (сума не вказана)' if bg == 0 else bg|money) }}</div>
+<div class="muted">Забезп. договору</div><div>{{ 'є' if cg else 'немає' }}</div>
+{% for w in winners %}<div class="muted">Переможець</div><div>{{ org(w) }}</div>{% endfor %}
+<div class="muted">Замовник</div><div>{{ org(t.procuringEntity or {}) }}<div class="muted">{{ ((t.procuringEntity or {}).address or {}).region }}</div></div>
+<div class="muted">Змінено</div><div>{{ t.dateModified }}</div>
+<div class="muted">Prozorro</div><div><a href="https://prozorro.gov.ua/tender/{{ t.tenderID }}" target="_blank" rel="noopener">відкрити</a></div>
+{% for m in matches %}<div class="muted">Пошук</div><div>{{ m.name }} · <span class="{{ m.state }}">{{ m.state }}</span>{% if m.taken_by %} · взяв {{ m.taken_by }}{% endif %} · {{ m.sent_at|dt }}</div>{% endfor %}
+<div class="muted">Стан</div><div>{% for k, v in [('taken','Беру'),('skip','Не цікаво'),('new','Скинути')] %}
+<form class="inline" method="post" action="{{ url_for('tender_state', tid=t.id) }}"><input type="hidden" name="csrf" value="{{ csrf() }}"><button name="state" value="{{ k }}">{{ v }}</button></form>{% endfor %}</div>
+</div>
+<details style="margin-top:12px"><summary>Сирий JSON</summary><pre>{{ raw }}</pre></details>
+{% endblock %}

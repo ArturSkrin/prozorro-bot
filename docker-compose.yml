@@ -1,0 +1,15 @@
+services:
+  bot:
+    build: .
+    env_file: .env
+    volumes: [./data:/data]
+    restart: unless-stopped
+    stop_grace_period: 20s
+  web:
+    build: .
+    env_file: .env
+    environment: { WEB_HOST: 0.0.0.0 }   # внутри контейнера; наружу только на 127.0.0.1 хоста
+    command: ["python", "-m", "web.app"]
+    ports: ["127.0.0.1:8080:8080"]
+    volumes: [./data:/data]
+    restart: unless-stopped
