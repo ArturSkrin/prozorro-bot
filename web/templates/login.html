@@ -1,6 +1,11 @@
-{% extends "base.html" %}{% block body %}
-<form method="post" style="max-width:280px;display:grid;gap:8px">
+{% extends "base.html" %}{% block title %}Вхід · Prozorro бот{% endblock %}{% block shell %}
+<main class="login">
+<form method="post">
 <input type="hidden" name="csrf" value="{{ csrf() }}">
-<label>Пароль <input type="password" name="password" autofocus required></label>
-{% if error %}<div class="err">{{ error }}</div>{% endif %}<button>Увійти</button></form>
+<div class="brand"><img src="{{ asset('favicon.svg') }}" alt=""><span>Prozorro бот</span></div>
+<label>Пароль <input type="password" name="password" autocomplete="current-password" autofocus required></label>
+{% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+<button class="btn-primary">{{ icon('lock') }}Увійти</button>
+</form>
+</main>
 {% endblock %}

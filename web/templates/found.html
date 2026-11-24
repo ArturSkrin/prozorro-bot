@@ -1,12 +1,33 @@
-{% extends "base.html" %}{% block body %}
-<form class="filters"><input name="q" value="{{ q }}" placeholder="UA-2026-…">
-<select name="search"><option value="">усі пошуки</option>{% for s in searches %}<option value="{{ s.id }}" {{ 'selected' if sid == s.id|string }}>{{ s.name }}</option>{% endfor %}</select>
-<select name="state"><option value="">усі</option>{% for k, v in [('new','новий'),('taken','беру'),('skip','не цікаво')] %}<option value="{{ k }}" {{ 'selected' if state == k }}>{{ v }}</option>{% endfor %}</select>
-<button>Фільтр</button></form>
-<div class="wrap"><table><tr><th>Надіслано</th><th>Тендер</th><th>Назва / замовник</th><th class="num">Сума</th><th>Статус</th><th>Пошуки</th><th>Стан</th></tr>
-{% for r in rows %}<tr><td class="num muted">{{ r.sent_at|dt }}</td><td><a href="{{ url_for('tender', tid=r.id) }}">{{ r.tender_id }}</a></td>
-<td>{{ r.title }}<div class="muted">{{ r.buyer }}</div></td><td class="num">{{ r.amount|money }} {{ r.currency }}</td>
-<td>{{ STATUSES.get(r.status, r.status) }}</td><td class="muted">{{ r.searches }}</td>
-<td class="{{ r.state }}">{{ {'new':'новий','taken':'взяв ' ~ (r.taken_by or ''),'skip':'не цікаво'}[r.state] }}</td></tr>
-{% else %}<tr><td colspan="7" class="muted">Поки нічого</td></tr>{% endfor %}</table></div>
+{% extends "base.html" %}{% block title %}Знайдено · Prozorro бот{% endblock %}{% block body %}
+{% set total = counts.values()|sum %}
+<div class="page-head">
+<h1>Знайдено</h1>
+<nav class="seg" aria-label="Стан">
+{% for k, v in [('', 'Усі'), ('new', 'Нові'), ('taken', 'Беру'), ('skip', 'Не цікаво')] %}
+<a href="{{ url_for('found', q=q or None, search=sid or None, state=k or None) }}"{% if state == k %} aria-current="true"{% endif %}>{{ v }} <span class="n">{{ '{:,}'.format(total if not k else counts.get(k, 0)).replace(',', ' ') }}</span></a>
+{% endfor %}
+</nav>
+<span class="spacer"></span>
+<form class="filters" style="margin:0">
+{% if state %}<input type="hidden" name="state" value="{{ state }}">{% endif %}
+<div class="field-icon">{{ icon('search') }}<input name="q" value="{{ q }}" placeholder="UA-2026-…" aria-label="Номер тендера"></div>
+<select name="search" aria-label="Пошук"><option value="">Усі пошуки</option>{% for s in searches %}<option value="{{ s.id }}" {{ 'selected' if sid == s.id|string }}>{{ s.name }}</option>{% endfor %}</select>
+<button>Показати</button>
+</form>
+</div>
+<div class="wrap"><table>
+<thead><tr><th class="col-opt-sm">Надіслано</th><th class="col-opt-sm">Тендер</th><th>Предмет · замовник</th><th class="num">Очікувана вартість</th><th class="col-opt">Статус</th><th class="col-opt">Пошук</th><th>Стан</th></tr></thead>
+<tbody>
+{% for r in rows %}<tr>
+<td class="nowrap muted col-opt-sm" title="{{ r.sent_at|dt }}">{{ (r.sent_at|dt)[:16] }}</td>
+<td class="col-opt-sm"><a class="tid" href="{{ url_for('tender', tid=r.id) }}">{{ r.tender_id }}</a></td>
+<td class="main"><a class="title" href="{{ url_for('tender', tid=r.id) }}" title="{{ r.title }}">{{ r.title }}</a><div class="sub" title="{{ r.buyer }}">{{ r.buyer }}</div></td>
+<td class="num"><span class="amount">{{ r.amount|money_html }}</span><span class="cur">{{ r.currency }}</span></td>
+<td class="col-opt"><span class="tag clip" title="{{ STATUSES.get(r.status, r.status) }}">{{ STATUSES.get(r.status, r.status) }}</span></td>
+<td class="col-opt muted"><div class="clip" title="{{ r.searches }}">{{ r.searches }}</div></td>
+<td><span class="pill {{ r.state }}">{{ STATES[r.state] }}{% if r.state == 'taken' and r.taken_by %} · {{ r.taken_by }}{% endif %}</span></td>
+</tr>
+{% else %}<tr><td colspan="7" class="empty">{% if q or sid or state %}<b>За цим фільтром нічого</b><a href="{{ url_for('found') }}">Скинути фільтр</a>{% else %}<b>Поки нічого не знайдено</b>Бот надсилає сюди тендери, що підійшли під <a href="{{ url_for('searches') }}">пошуки</a>.{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% if rows|length == 500 %}<p class="count">Показано останні 500. Звузьте фільтр, щоб побачити старіші.</p>{% endif %}
 {% endblock %}
