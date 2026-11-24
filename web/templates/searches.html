@@ -1,11 +1,23 @@
-{% extends "base.html" %}{% block body %}
-<p><a href="{{ url_for('search_edit') }}">+ Новий пошук</a></p>
-<table><tr><th>Назва</th><th>Параметри</th><th>Чати</th><th></th></tr>
-{% for s in searches %}{% set p = s.params %}<tr><td>{{ '🟢' if s.enabled else '⚪️' }} <a href="{{ url_for('search_edit', sid=s.id) }}">{{ s.name }}</a>{% if s.send_changes %} <span class="tag">зміни</span>{% endif %}</td>
-<td class="muted">{% for c in p.statuses %}{{ STATUSES.get(c, c) }}{{ ', ' if not loop.last }}{% endfor %}{% if p.amount_min is not none %} · від {{ p.amount_min|money }}{% endif %}{% if p.amount_max is not none %} · до {{ p.amount_max|money }}{% endif %} {{ p.currency or '' }}
-{% if p.bid_guarantee %} · забезп. пропозицій{% endif %}{% if p.contract_guarantee %} · забезп. договору{% endif %}
-{% for k in ['method_types','cpv','regions','keywords','minus_words','edrpou_allow','edrpou_deny'] %}{% if p[k] %} · {{ k }}: {{ p[k]|join(', ') }}{% endif %}{% endfor %}</td>
-<td class="muted">{{ s.chat_ids|join(', ') or 'усі' }}</td>
-<td style="white-space:nowrap"><form class="inline" method="post" action="{{ url_for('search_toggle', sid=s.id) }}"><input type="hidden" name="csrf" value="{{ csrf() }}"><button>{{ 'Вимкнути' if s.enabled else 'Увімкнути' }}</button></form>
-<form class="inline" method="post" action="{{ url_for('search_delete', sid=s.id) }}" onsubmit="return confirm('Видалити?')"><input type="hidden" name="csrf" value="{{ csrf() }}"><button>Видалити</button></form></td></tr>{% endfor %}</table>
+{% extends "base.html" %}{% block title %}Пошуки · Prozorro бот{% endblock %}{% block body %}
+{% set names = {'method_types': 'процедура', 'cpv': 'CPV', 'regions': 'регіон', 'keywords': 'слова', 'minus_words': 'мінус', 'edrpou_allow': 'ЄДРПОУ+', 'edrpou_deny': 'ЄДРПОУ−'} %}
+<div class="page-head"><h1>Пошуки</h1><span class="spacer"></span><a class="btn btn-primary" href="{{ url_for('search_edit') }}">{{ icon('plus') }}Новий пошук</a></div>
+<div class="wrap"><table>
+<thead><tr><th>Назва</th><th>Умови</th><th class="col-opt">Чати</th><th></th></tr></thead>
+<tbody>
+{% for s in searches %}{% set p = s.params %}<tr>
+<td><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><a href="{{ url_for('search_edit', sid=s.id) }}">{{ s.name }}</a><span class="pill {{ 'on' if s.enabled else 'off' }}">{{ 'увімкнено' if s.enabled else 'вимкнено' }}</span>{% if s.send_changes %}<span class="tag" title="Надсилає зміни статусу">+ зміни</span>{% endif %}</div></td>
+<td><div class="chips">
+{% for c in p.statuses %}<span class="tag">{{ STATUSES.get(c, c) }}</span>{% endfor %}
+{% if p.amount_min is not none or p.amount_max is not none %}<span class="tag">{% if p.amount_min is not none %}від {{ p.amount_min|money }}{% endif %}{% if p.amount_max is not none %} до {{ p.amount_max|money }}{% endif %} {{ p.currency or '' }}</span>{% endif %}
+{% if p.max_age_days %}<span class="tag">≤ {{ '%g'|format(p.max_age_days) }} дн.</span>{% endif %}
+{% if p.bid_guarantee %}<span class="tag">забезп. пропозицій</span>{% endif %}{% if p.contract_guarantee %}<span class="tag">забезп. договору</span>{% endif %}
+{% for k, n in names.items() %}{% if p[k] %}<span class="tag" title="{{ p[k]|join(', ') }}">{{ n }}: {{ p[k][:3]|join(', ') }}{% if p[k]|length > 3 %} +{{ p[k]|length - 3 }}{% endif %}</span>{% endif %}{% endfor %}
+</div></td>
+<td class="col-opt muted mono">{{ s.chat_ids|join(', ') or 'усі' }}</td>
+<td><div class="row-actions">
+<form method="post" action="{{ url_for('search_toggle', sid=s.id) }}"><input type="hidden" name="csrf" value="{{ csrf() }}"><button title="{{ 'Вимкнути' if s.enabled else 'Увімкнути' }}">{{ icon('power') }}<span class="col-opt-sm">{{ 'Вимкнути' if s.enabled else 'Увімкнути' }}</span></button></form>
+<form method="post" action="{{ url_for('search_delete', sid=s.id) }}" onsubmit='return confirm({{ ("Видалити пошук «" ~ s.name ~ "»? Це не можна скасувати.")|tojson }})'><input type="hidden" name="csrf" value="{{ csrf() }}"><button class="btn-danger" title="Видалити" aria-label="Видалити">{{ icon('trash') }}</button></form>
+</div></td></tr>
+{% else %}<tr><td colspan="4" class="empty"><b>Пошуків ще немає</b>Створіть перший — бот почне надсилати тендери, що під нього підходять.</td></tr>{% endfor %}
+</tbody></table></div>
 {% endblock %}

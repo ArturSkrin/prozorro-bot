@@ -4,8 +4,10 @@ import json
 import os
 import secrets
 import time
+from datetime import datetime
 
 from flask import Flask, abort, g, redirect, render_template, request, session, url_for
+from markupsafe import Markup
 
 from bot import config, db  # noqa: F401  (config грузит .env)
 from bot.match import DEFAULT_PARAMS, STATUSES, bid_guarantee, has_contract_guarantee, winners
@@ -31,7 +33,24 @@ def close(_):
 
 @app.template_filter("money")
 def money(x):
-    return "—" if x is None else f"{x:,.2f}".replace(",", " ")
+    return "—" if x is None else f"{x:,.2f}".replace(",", "\u00a0").replace(".", ",")
+
+
+@app.template_filter("money_html")
+def money_html(x):
+    """Гривні яскраво, копійки приглушено: суми читаються по цілій частині."""
+    if x is None:
+        return "—"
+    whole, frac = money(x).rsplit(",", 1)
+    return Markup('{}<span class="dec">,{}</span>').format(whole, frac)
+
+
+@app.template_filter("iso")
+def iso(x):
+    try:
+        return datetime.fromisoformat(x).strftime("%d.%m.%Y %H:%M")
+    except (TypeError, ValueError):
+        return x or "—"
 
 
 @app.template_filter("dt")
@@ -39,7 +58,21 @@ def dt(x):
     return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(x)) if x else "—"
 
 
-app.jinja_env.globals.update(STATUSES=STATUSES, csrf=lambda: session.setdefault("csrf", secrets.token_hex(16)))
+STATIC = os.path.join(os.path.dirname(__file__), "static")
+
+
+def asset(name):
+    # ?v=mtime — Cloudflare кеширует статику, без версии новый CSS не доедет
+    return url_for("static", filename=name, v=int(os.path.getmtime(os.path.join(STATIC, name))))
+
+
+def icon(name):
+    return Markup('<svg class="i" aria-hidden="true"><use href="{}#{}"/></svg>').format(asset("icons.svg"), name)
+
+
+STATES = {"new": "новий", "taken": "беру", "skip": "не цікаво"}
+app.jinja_env.globals.update(STATUSES=STATUSES, STATES=STATES, asset=asset, icon=icon,
+                             csrf=lambda: session.setdefault("csrf", secrets.token_hex(16)))
 
 
 @app.before_request
@@ -88,7 +121,9 @@ def found():
         sql += " AND m.state=?"
         args.append(state)
     rows = con().execute(sql + " GROUP BY t.id ORDER BY sent_at DESC LIMIT 500", args).fetchall()
-    return render_template("found.html", rows=rows, searches=db.searches(con()), q=q, sid=sid, state=state)
+    counts = dict(con().execute("SELECT state, COUNT(DISTINCT tender_id) FROM matches GROUP BY state").fetchall())
+    return render_template("found.html", rows=rows, searches=db.searches(con()), q=q, sid=sid, state=state,
+                           counts=counts)
 
 
 @app.route("/tender/<tid>")

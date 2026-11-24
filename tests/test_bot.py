@@ -148,3 +148,10 @@ def test_feed_cursor_dedup_and_changes(con):
     assert api.calls[0] == "P2"
     assert tg2.sent == [] and len(tg2.changes) == 1 and "ТОВ Новий" in tg2.changes[0]
     assert db.get_state(con, "feed_offset") == "P3"
+
+
+def test_web_money_format():
+    from web.app import money, money_html
+    assert money(22499412000) == "22 499 412 000,00"
+    assert str(money_html(13409027.45)) == '13 409 027<span class="dec">,45</span>'
+    assert money(None) == "—"

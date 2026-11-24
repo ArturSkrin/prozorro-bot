@@ -1,20 +1,44 @@
-{% extends "base.html" %}{% block title %}{{ t.tenderID }}{% endblock %}{% block body %}
-{% macro org(o) %}<b>{{ o.name }}</b>, ЄДРПОУ {{ (o.identifier or {}).id }}{% set cp = o.contactPoint or {} %}
-<div>{{ cp.name or '' }} {{ cp.telephone or '' }} {% if cp.email %}<a href="mailto:{{ cp.email }}">{{ cp.email }}</a>{% endif %}</div>{% endmacro %}
-<h2>{{ t.tenderID }} <span class="tag">{{ STATUSES.get(t.status, t.status) }}</span></h2>
-<div class="grid">
-<div class="muted">Назва</div><div>{{ t.title }}</div>
-<div class="muted">Сума</div><div class="num" style="text-align:left">{{ (t.value or {}).amount|money }} {{ (t.value or {}).currency }}</div>
-<div class="muted">Процедура</div><div>{{ t.procurementMethodType }}</div>
-<div class="muted">Забезп. пропозицій</div><div>{{ 'немає' if bg is none else ('є (сума не вказана)' if bg == 0 else bg|money) }}</div>
-<div class="muted">Забезп. договору</div><div>{{ 'є' if cg else 'немає' }}</div>
-{% for w in winners %}<div class="muted">Переможець</div><div>{{ org(w) }}</div>{% endfor %}
-<div class="muted">Замовник</div><div>{{ org(t.procuringEntity or {}) }}<div class="muted">{{ ((t.procuringEntity or {}).address or {}).region }}</div></div>
-<div class="muted">Змінено</div><div>{{ t.dateModified }}</div>
-<div class="muted">Prozorro</div><div><a href="https://prozorro.gov.ua/tender/{{ t.tenderID }}" target="_blank" rel="noopener">відкрити</a></div>
-{% for m in matches %}<div class="muted">Пошук</div><div>{{ m.name }} · <span class="{{ m.state }}">{{ m.state }}</span>{% if m.taken_by %} · взяв {{ m.taken_by }}{% endif %} · {{ m.sent_at|dt }}</div>{% endfor %}
-<div class="muted">Стан</div><div>{% for k, v in [('taken','Беру'),('skip','Не цікаво'),('new','Скинути')] %}
-<form class="inline" method="post" action="{{ url_for('tender_state', tid=t.id) }}"><input type="hidden" name="csrf" value="{{ csrf() }}"><button name="state" value="{{ k }}">{{ v }}</button></form>{% endfor %}</div>
+{% extends "base.html" %}{% block title %}{{ t.tenderID }} · Prozorro бот{% endblock %}{% block body %}
+{% macro org(o) %}<div class="org"><b>{{ o.name or '—' }}</b>{% if (o.identifier or {}).id %} <span class="muted nowrap">ЄДРПОУ <span class="mono">{{ o.identifier.id }}</span></span>{% endif %}
+{% set cp = o.contactPoint or {} %}{% if cp.name or cp.telephone or cp.email %}<div class="contacts">{{ cp.name or '' }}{% if cp.telephone %} · <a href="tel:{{ cp.telephone }}">{{ cp.telephone }}</a>{% endif %}{% if cp.email %} · <a href="mailto:{{ cp.email }}">{{ cp.email }}</a>{% endif %}</div>{% endif %}</div>{% endmacro %}
+{% set cur = (matches|map(attribute='state')|list|max) if matches else 'new' %}
+{% set v = t.value or {} %}
+<a class="crumb" href="{{ url_for('found') }}">{{ icon('back') }}Знайдено</a>
+<div class="tender-head">
+<div>
+<div class="meta"><span class="tid">{{ t.tenderID }}</span><span class="tag">{{ STATUSES.get(t.status, t.status) }}</span><span class="pill {{ cur }}">{{ STATES[cur] }}</span></div>
+<h1>{{ t.title }}</h1>
 </div>
-<details style="margin-top:12px"><summary>Сирий JSON</summary><pre>{{ raw }}</pre></details>
+<div class="tender-sum"><div class="muted">Очікувана вартість</div><div class="big">{{ v.amount|money_html }}<span class="cur">{{ v.currency }}</span></div></div>
+</div>
+<div class="cols">
+<section class="panel">
+<dl class="kv">
+<dt>Замовник</dt><dd>{{ org(t.procuringEntity or {}) }}{% set reg = ((t.procuringEntity or {}).address or {}).region %}{% if reg %}<div class="contacts">{{ reg }}</div>{% endif %}</dd>
+{% for w in winners %}<dt>Переможець</dt><dd>{{ org(w) }}</dd>{% endfor %}
+<dt>Процедура</dt><dd><code>{{ t.procurementMethodType }}</code></dd>
+<dt>Забезпечення пропозицій</dt><dd>{% if bg is none %}<span class="muted">немає</span>{% elif bg == 0 %}є, сума не вказана{% else %}<span class="num">{{ bg|money_html }}</span><span class="cur">{{ v.currency }}</span>{% endif %}</dd>
+<dt>Забезпечення договору</dt><dd>{% if cg %}є{% else %}<span class="muted">немає</span>{% endif %}</dd>
+<dt>Змінено</dt><dd title="{{ t.dateModified }}">{{ t.dateModified|iso }}</dd>
+</dl>
+</section>
+<aside>
+<section class="panel">
+<h2>Рішення</h2>
+<form method="post" action="{{ url_for('tender_state', tid=t.id) }}"><input type="hidden" name="csrf" value="{{ csrf() }}">
+<div class="seg" role="group" aria-label="Стан тендера">
+{% for k, label, ic in [('taken', 'Беру', 'check'), ('skip', 'Не цікаво', 'x'), ('new', 'Новий', 'reset')] %}
+<button name="state" value="{{ k }}" class="{{ k }}" aria-pressed="{{ 'true' if cur == k else 'false' }}">{{ icon(ic) }}{{ label }}</button>
+{% endfor %}
+</div></form>
+<p style="margin:12px 0 0"><a class="btn" href="https://prozorro.gov.ua/tender/{{ t.tenderID }}" target="_blank" rel="noopener">{{ icon('external') }}Відкрити на Prozorro</a></p>
+</section>
+<section class="panel">
+<h2>Пошуки</h2>
+<ul class="match-list">{% for m in matches %}<li><span>{{ m.name or '—' }}</span><span class="pill {{ m.state }}">{{ STATES.get(m.state, m.state) }}{% if m.taken_by %} · {{ m.taken_by }}{% endif %}</span><span class="muted" style="font-size:12.5px">{{ (m.sent_at|dt)[:16] }}</span></li>
+{% else %}<li class="muted">Не надсилався</li>{% endfor %}</ul>
+</section>
+</aside>
+</div>
+<details class="raw"><summary>Сирий JSON</summary><pre>{{ raw }}</pre></details>
 {% endblock %}

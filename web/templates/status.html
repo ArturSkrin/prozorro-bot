@@ -1,10 +1,15 @@
-{% extends "base.html" %}{% block body %}
-<div class="grid">
-<div class="muted">Стан</div><div>{{ 'На паузі' if info.paused == '1' else 'Працює' }}</div>
-<div class="muted">Курсор</div><div><code>{{ info.feed_offset or '—' }}</code></div>
-<div class="muted">Остання зміна</div><div>{{ info.last_modified or '—' }}</div>
-<div class="muted">Відставання</div><div class="num" style="text-align:left">{{ '%.0f'|format(info.lag_sec|float) if info.lag_sec else '—' }} с</div>
-<div class="muted">Надіслано за добу / всього</div><div class="num" style="text-align:left">{{ sent_day }} / {{ sent_total }}</div>
+{% extends "base.html" %}{% block title %}Стан · Prozorro бот{% endblock %}{% block body %}
+{% set lag = info.lag_sec|float if info.lag_sec else none %}
+<div class="page-head"><h1>Стан</h1>{% if info.paused == '1' %}<span class="pill warn">на паузі</span>{% else %}<span class="pill on">працює</span>{% endif %}</div>
+<div class="cols" style="grid-template-columns:minmax(0,640px)">
+<section class="panel"><dl class="kv">
+<dt>Відставання від фіду</dt><dd>{% if lag is none %}—{% else %}<span class="{{ 'err' if lag > 3600 else '' }}">{{ '{:,.0f}'.format(lag).replace(',', ' ') }} с</span>{% if lag >= 120 %} <span class="muted">≈ {{ '%.0f'|format(lag / 60) }} хв</span>{% endif %}{% endif %}</dd>
+<dt>Надіслано за добу</dt><dd class="amount">{{ '{:,}'.format(sent_day).replace(',', ' ') }}</dd>
+<dt>Надіслано всього</dt><dd>{{ '{:,}'.format(sent_total).replace(',', ' ') }}</dd>
+<dt>Остання зміна в фіді</dt><dd title="{{ info.last_modified or '' }}">{{ info.last_modified|iso }}</dd>
+<dt>Курсор</dt><dd><code style="word-break:break-all">{{ info.feed_offset or '—' }}</code></dd>
+</dl></section>
 </div>
-<h3>Помилки API</h3><table>{% for e in errors %}<tr><td class="num muted">{{ e.ts|dt }}</td><td>{{ e.text }}</td></tr>{% else %}<tr><td class="muted">немає</td></tr>{% endfor %}</table>
+<h2 style="margin:24px 0 10px">Помилки API</h2>
+<div class="wrap"><table><tbody>{% for e in errors %}<tr><td class="nowrap muted" style="width:1%">{{ e.ts|dt }}</td><td class="mono" style="word-break:break-word">{{ e.text }}</td></tr>{% else %}<tr><td class="empty"><b>Помилок немає</b>Останні 50 помилок API з’являться тут.</td></tr>{% endfor %}</tbody></table></div>
 {% endblock %}
